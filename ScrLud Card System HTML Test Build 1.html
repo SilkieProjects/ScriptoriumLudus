@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scriptorium Ludus: Card test rig</title>
+<style>
+:root{--bg:#17101c;--panel:#211828;--panel2:#2c2035;--line:#4d3b5c;--text:#f1e8d6;--muted:#bfaecb;--gold:#e8c36a;--ink:#2a1b3d;--bad:#ff9d9d;--ok:#a9e6c1;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font:600 21px/1.2 "Iowan Old Style",Palatino,Georgia,serif;margin:0}
+h1 small{display:block;font:400 14px system-ui,sans-serif;color:var(--muted)}
+h2{font:600 17px/1.3 "Iowan Old Style",Palatino,Georgia,serif;margin:0}
+.model{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+select,input,textarea,button{font:inherit;color:inherit}
+select,textarea,input[type=text]{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+button{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+button.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
+button:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+progress{width:140px;height:10px;accent-color:var(--gold)}
+#status{flex-basis:100%;font-size:14px;color:var(--muted);min-height:20px}
+#status.err{color:var(--bad)}
+.tabs{display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--line)}
+.tabs button[aria-selected=true]{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
+main{flex:1;min-height:0;display:grid}
+section{min-height:0;overflow:auto;padding:14px 16px;flex-direction:column;gap:12px}
+@media(min-width:1100px){
+  main{grid-template-columns:370px minmax(0,1fr) 390px}
+  .tabs{display:none}
+  section{display:flex}
+  section + section{border-left:1px solid var(--line)}
+}
+@media(max-width:1099px){
+  main{grid-template-columns:minmax(0,1fr)}
+  section{display:none}
+  main[data-view=cards] #cards,main[data-view=chat] #chat,main[data-view=prompt] #prompt{display:flex}
+}
+.field label,.sliderrow label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+.field textarea{width:100%;resize:vertical}
+.sliderrow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center}
+.sliderrow input{grid-column:1/3;width:100%;accent-color:var(--gold);min-height:32px}
+.sliderrow output{font-weight:600;color:var(--gold)}
+.band{grid-column:1/3;font-size:14px;color:var(--text);background:var(--panel);border-left:3px solid var(--gold);padding:6px 10px;border-radius:0 8px 8px 0}
+.seg{display:flex;gap:6px}
+.seg button[aria-pressed=true]{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
+details{border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--panel)}
+summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-weight:600}
+details .field{margin:8px 0}
+#chat{overflow:hidden}
+#log{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding-right:4px}
+.msg{padding:10px 14px;border-radius:14px;max-width:88%;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg .who{font:13px system-ui,sans-serif;color:var(--muted);margin-bottom:2px}
+.msg.user{align-self:flex-end;background:#3d2b4d}
+.msg.ai{align-self:flex-start;background:var(--panel2);font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:18px;line-height:1.5}
+.chip{display:inline-block;margin:6px 6px 0 0;padding:2px 10px;border-radius:999px;background:#1d3a2a;color:var(--ok);font:13px system-ui,sans-serif}
+.empty{color:var(--muted);margin:auto;text-align:center;max-width:32ch}
+.composer{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{flex:1;resize:none;min-height:48px;max-height:140px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;font:13px/1.45 ui-monospace,Menlo,monospace;margin:0;max-height:48vh;overflow:auto}
+.meta{font-size:14px;color:var(--muted)}
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.result{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.result h3{margin:0 0 4px;font:600 15px system-ui,sans-serif;color:var(--gold)}
+.result p{margin:0;white-space:pre-wrap;font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Scriptorium Ludus <small>Card test rig</small></h1>
+  <div class="model">
+    <label for="model" class="meta">Model</label>
+    <select id="model">
+      <option value="Llama-3.2-1B-Instruct-q4f32_1-MLC">Llama 3.2 1B (most compatible)</option>
+      <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B (lighter, needs f16)</option>
+      <option value="Qwen2.5-0.5B-Instruct-q4f32_1-MLC">Qwen 2.5 0.5B (smallest)</option>
+    </select>
+    <button id="loadBtn" class="primary">Load model</button>
+    <progress id="bar" max="1" value="0" hidden></progress>
+  </div>
+  <div id="status" role="status" aria-live="polite">No model loaded. The first load downloads roughly 1 GB, then it is cached on this device.</div>
+</header>
+
+<nav class="tabs" aria-label="Panels">
+  <button data-tab="chat" aria-selected="true">Chat</button>
+  <button data-tab="cards" aria-selected="false">Cards</button>
+  <button data-tab="prompt" aria-selected="false">Prompt</button>
+</nav>
+
+<main data-view="chat">
+  <section id="cards" aria-label="Cards"></section>
+
+  <section id="chat" aria-label="Chat">
+    <div class="row"><h2 id="chatTitle">Chat</h2></div>
+    <div id="log" role="log" aria-live="polite"></div>
+    <div class="composer">
+      <textarea id="input" rows="1" placeholder="Say or do something…" aria-label="Your message"></textarea>
+      <button id="sendBtn" class="primary">Send</button>
+      <button id="stopBtn" hidden>Stop</button>
+    </div>
+  </section>
+
+  <section id="prompt" aria-label="Prompt">
+    <h2>Prompt sent to the model</h2>
+    <p class="meta" id="promptMeta"></p>
+    <pre id="promptView"></pre>
+    <div class="row"><button id="copyBtn">Copy prompt</button></div>
+
+    <h2>Trust test</h2>
+    <p class="meta">Sends the same line to the active character twice, once at trust 15 and once at trust 80, with no chat history. If the two replies feel different, the relationship card is working.</p>
+    <div class="field"><label for="testLine">Test line</label><textarea id="testLine" rows="2"></textarea></div>
+    <div class="row"><button id="testBtn" class="primary">Run trust test</button></div>
+    <div id="testOut" class="results"></div>
+  </section>
+</main>
+
+<script type="module">
+/* ------------------------------------------------------------------
+   Scriptorium Ludus: card test rig
+   The big idea: cards are plain data. buildSystem() turns them into
+   instructions for the model, and picks only the relationship "band"
+   that matches the current numbers.
+------------------------------------------------------------------- */
+const WEBLLM_URL = "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm";
+const KEY = "scriptorium-card-test-v1";
+
+/* ---------- Starting data (this is what a scenario would contain) ---------- */
+function defaults() {
+  return {
+    scene: "Evening at a roadside inn, rain against the windows. The player has just sat down at the courier's table.",
+    activeId: "mira",
+    recentTurns: 6,
+    allowTags: true,
+    testLine: "You look like you're hiding something. What's in that satchel?",
+    chats: { mira: [], kael: [] },
+    characters: [
+      {
+        id: "mira", name: "Mira Voss", role: "Guarded courier, 24",
+        personality: "wary, dry-witted, quietly loyal",
+        speech: "short sentences; sarcasm when nervous; avoids using names early",
+        wants: "to pay off her family's debt",
+        fears: "being owed favors",
+        secret: "she carries a forged royal seal in her satchel",
+        examples: "\"Don't thank me. Thanks cost extra.\"\n\"...Fine. Sit. But you're buying.\"",
+        notes: "",
+        rel: {
+          trust: 15, affection: 5,
+          history: "Met two days ago when the player returned her lost satchel.",
+          trustBands: [
+            "guarded and curt; tests the player; hides her secret and changes the subject if asked",
+            "warms up; jokes; shares small personal details; still hides the secret",
+            "confides in the player and may reveal the forged seal"
+          ],
+          affBands: [
+            "keeps her distance; no personal warmth",
+            "teases kindly now and then",
+            "openly fond of the player, in her own prickly way"
+          ],
+          notes: ""
+        }
+      },
+      {
+        id: "kael", name: "Kael Thorne", role: "Innkeeper and retired city guard, 41",
+        personality: "steady, blunt, protective, hates lying",
+        speech: "plain words; rarely jokes; calls the player 'friend'",
+        wants: "a quiet life and to make up for an old mistake",
+        fears: "his past catching up with the inn",
+        secret: "years ago he let a prisoner escape",
+        examples: "\"Speak plainly and I'll listen.\"\n\"Rain like this, nobody travels. Sit.\"",
+        notes: "",
+        rel: {
+          trust: 40, affection: 20,
+          history: "Owns the inn where the player is staying; gave the player a free meal on the first night.",
+          trustBands: [
+            "polite but watchful; short answers; keeps his past to himself",
+            "friendly; offers advice; hints that he used to serve in the city guard",
+            "speaks openly about his past and may admit he let a prisoner escape"
+          ],
+          affBands: [
+            "treats the player like any customer",
+            "looks out for the player",
+            "treats the player like family and worries about their safety"
+          ],
+          notes: ""
+        }
+      }
+    ]
+  };
+}
+
+/* ---------- Saving (stays in this browser only) ---------- */
+function load() { try { const t = localStorage.getItem(KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
+let saveTimer;
+function save() { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }, 300); }
+
+let S = load() || defaults();
+const $ = (id) => document.getElementById(id);
+const active = () => S.characters.find((c) => c.id === S.activeId) || S.characters[0];
+const chatOf = (id) => (S.chats[id] = S.chats[id] || []);
+
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const kid of kids) if (kid != null) e.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return e;
+}
+
+/* ---------- The prompt builder (the heart of the test) ---------- */
+const bandIndex = (v) => (v < 30 ? 0 : v < 60 ? 1 : 2);
+const bandText = (bands, v) => bands[bandIndex(v)];
+
+function buildSystem(c) {
+  const r = c.rel;
+  const lines = [
+    `You are the narrator of an interactive story, and you play ${c.name}. Write 2 to 4 sentences of story in third person, describing what ${c.name} says and does. Put spoken words in quotes. Never write what the player says, does or thinks. Stay in character. Do not reveal a secret unless the relationship notes below allow it.`,
+    "",
+    "SCENE",
+    S.scene,
+    "",
+    `CHARACTER: ${c.name}`,
+    `Role: ${c.role}`,
+    `Personality: ${c.personality}`,
+    `How they speak: ${c.speech}`,
+    `Wants: ${c.wants}`,
+    `Fears: ${c.fears}`,
+    `Secret (keep hidden unless allowed below): ${c.secret}`,
+    `Example lines: ${c.examples.replace(/\n/g, " ")}`
+  ];
+  if (c.notes.trim()) lines.push(`Notes to remember: ${c.notes.trim().replace(/\n/g, " | ")}`);
+  lines.push(
+    "",
+    "RELATIONSHIP WITH THE PLAYER",
+    `History: ${r.history}`,
+    `Trust (${r.trust} out of 100): ${c.name} is ${bandText(r.trustBands, r.trust)}.`,
+    `Affection (${r.affection} out of 100): ${c.name} is ${bandText(r.affBands, r.affection)}.`
+  );
+  if (r.notes.trim()) lines.push(`Relationship notes: ${r.notes.trim().replace(/\n/g, " | ")}`);
+  if (S.allowTags) {
+    lines.push(
+      "",
+      "After the story text you may add one line of tags, only when something really changed:",
+      "[NOTE: a short fact worth remembering]  [trust +5]  [trust -5]  [affection +3]  [affection -3]"
+    );
+  }
+  return lines.join("\n");
+}
+
+function buildMessages(c, hist) {
+  let recent = hist.slice(-(2 * S.recentTurns + 1));
+  while (recent.length && recent[0].role !== "user") recent.shift();
+  return [{ role: "system", content: buildSystem(c) }, ...recent.map((m) => ({ role: m.role, content: m.content }))];
+}
+
+function updatePrompt() {
+  const c = active();
+  const msgs = buildMessages(c, chatOf(c.id).concat([{ role: "user", content: "(your next message)" }]));
+  const text = msgs.map((m) => `[${m.role}]\n${m.content}`).join("\n\n");
+  $("promptView").textContent = text;
+  $("promptMeta").textContent = `About ${Math.round(text.length / 4)} tokens across ${msgs.length} messages. This updates as you edit the cards.`;
+}
+
+/* ---------- Tags the AI may add (the app validates them) ---------- */
+function extractTags(raw) {
+  const changes = [];
+  let clean = raw.replace(/\[NOTE:\s*([^\]]+)\]/gi, (m, t) => { changes.push({ type: "note", text: t.trim() }); return ""; });
+  clean = clean.replace(/\[(trust|affection)\s*:?\s*([+-]\s*\d+)\]/gi, (m, k, n) => {
+    changes.push({ type: k.toLowerCase(), delta: parseInt(n.replace(/\s/g, ""), 10) });
+    return "";
+  });
+  return { clean: clean.replace(/\n{3,}/g, "\n\n").trim(), changes };
+}
+
+function applyChanges(c, changes) {
+  const done = [];
+  for (const ch of changes) {
+    if (ch.type === "note") {
+      let n = (c.notes ? c.notes + "\n" : "") + ch.text;
+      while (n.length > 800 && n.includes("\n")) n = n.slice(n.indexOf("\n") + 1); // size cap: drop oldest lines
+      c.notes = n.slice(-800);
+      done.push("Note saved: " + ch.text);
+    } else {
+      const d = Math.max(-10, Math.min(10, ch.delta)); // the app limits each change to 10
+      const before = c.rel[ch.type];
+      c.rel[ch.type] = Math.max(0, Math.min(100, before + d));
+      done.push(`${ch.type[0].toUpperCase() + ch.type.slice(1)} ${d >= 0 ? "+" : ""}${d} (now ${c.rel[ch.type]})`);
+    }
+  }
+  return done;
+}
+
+/* ---------- Cards panel ---------- */
+function field(label, get, set, rows = 2) {
+  const id = "f" + Math.random().toString(36).slice(2, 9);
+  const ta = el("textarea", { id, rows });
+  ta.value = get();
+  ta.addEventListener("input", () => { set(ta.value); save(); updatePrompt(); });
+  return el("div", { class: "field" }, el("label", { for: id, text: label }), ta);
+}
+
+function slider(label, key, c) {
+  const id = "s" + Math.random().toString(36).slice(2, 9);
+  const out = el("output", { for: id });
+  const band = el("div", { class: "band" });
+  const bands = key === "trust" ? c.rel.trustBands : c.rel.affBands;
+  const r = el("input", { id, type: "range", min: "0", max: "100" });
+  r.value = c.rel[key];
+  const upd = () => { out.textContent = r.value; band.textContent = bandText(bands, +r.value); };
+  r.addEventListener("input", () => { c.rel[key] = +r.value; upd(); save(); updatePrompt(); });
+  upd();
+  return el("div", { class: "sliderrow" }, el("label", { for: id, text: label }), out, r, band);
+}
+
+function renderCards() {
+  const c = active();
+  const root = $("cards");
+  root.replaceChildren();
+
+  const seg = el("div", { class: "seg", role: "group", "aria-label": "Character" });
+  for (const ch of S.characters) {
+    seg.append(el("button", {
+      "aria-pressed": String(ch.id === c.id), text: ch.name.split(" ")[0],
+      onclick: () => { S.activeId = ch.id; save(); renderAll(); }
+    }));
+  }
+  root.append(el("h2", { text: "Cards" }), seg);
+
+  root.append(field("Scene (shared by both characters)", () => S.scene, (v) => (S.scene = v), 3));
+
+  const charBox = el("details", { open: "" }, el("summary", { text: `Character card: ${c.name}` }));
+  for (const [label, key, rows] of [
+    ["Name", "name", 1], ["Role", "role", 1], ["Personality", "personality", 2], ["How they speak", "speech", 2],
+    ["Wants", "wants", 1], ["Fears", "fears", 1], ["Secret", "secret", 2], ["Example lines", "examples", 3], ["Master notes (the AI can write here)", "notes", 3]
+  ]) charBox.append(field(label, () => c[key], (v) => { c[key] = v; }, rows));
+  root.append(charBox);
+
+  const relBox = el("details", { open: "" }, el("summary", { text: `Relationship: ${c.name} to the player` }));
+  relBox.append(slider("Trust", "trust", c), slider("Affection", "affection", c));
+  relBox.append(field("History", () => c.rel.history, (v) => { c.rel.history = v; }, 2));
+  relBox.append(field("Master notes (the AI can write here)", () => c.rel.notes, (v) => { c.rel.notes = v; }, 2));
+  root.append(relBox);
+
+  const bandBox = el("details", {}, el("summary", { text: "Edit behavior bands" }));
+  ["0 to 29", "30 to 59", "60 to 100"].forEach((rng, i) => {
+    bandBox.append(field(`Trust ${rng}`, () => c.rel.trustBands[i], (v) => { c.rel.trustBands[i] = v; }, 2));
+  });
+  ["0 to 29", "30 to 59", "60 to 100"].forEach((rng, i) => {
+    bandBox.append(field(`Affection ${rng}`, () => c.rel.affBands[i], (v) => { c.rel.affBands[i] = v; }, 2));
+  });
+  root.append(bandBox);
+
+  const opts = el("details", {}, el("summary", { text: "Settings" }));
+  const tagId = "tags";
+  const cb = el("input", { id: tagId, type: "checkbox" });
+  cb.checked = S.allowTags;
+  cb.addEventListener("change", () => { S.allowTags = cb.checked; save(); updatePrompt(); });
+  opts.append(el("div", { class: "field" }, el("label", { for: tagId }, cb, " Let the AI change values with tags")));
+  const nId = "turns";
+  const num = el("input", { id: nId, type: "text", inputmode: "numeric", value: String(S.recentTurns) });
+  num.addEventListener("input", () => {
+    const n = parseInt(num.value, 10);
+    if (n >= 1 && n <= 20) { S.recentTurns = n; save(); updatePrompt(); }
+  });
+  opts.append(el("div", { class: "field" }, el("label", { for: nId, text: "Recent turns sent to the model (1 to 20)" }), num));
+  opts.append(el("div", { class: "row" },
+    el("button", { text: "Clear this chat", onclick: () => { S.chats[c.id] = []; save(); renderChat(); updatePrompt(); } }),
+    el("button", { text: "Reset everything", onclick: () => {
+      if (confirm("Reset all cards and chats to the starting versions?")) { S = defaults(); save(); renderAll(); $("testLine").value = S.testLine; }
+    } })
+  ));
+  root.append(opts);
+}
+
+/* ---------- Chat ---------- */
+function renderChat() {
+  const c = active();
+  $("chatTitle").textContent = `Chat with ${c.name}`;
+  const log = $("log");
+  log.replaceChildren();
+  const hist = chatOf(c.id);
+  if (!hist.length) {
+    log.append(el("p", { class: "empty", text: `No messages yet. Load a model, then say something to ${c.name.split(" ")[0]}.` }));
+    return;
+  }
+  for (const m of hist) log.append(bubble(m, c));
+  log.scrollTop = log.scrollHeight;
+}
+
+function bubble(m, c) {
+  const b = el("div", { class: "msg " + (m.role === "user" ? "user" : "ai") },
+    el("div", { class: "who", text: m.role === "user" ? "You" : c.name }),
+    el("div", { class: "body", text: m.content }));
+  for (const t of m.applied || []) b.append(el("span", { class: "chip", text: t }));
+  return b;
+}
+
+function renderAll() { renderCards(); renderChat(); updatePrompt(); }
+
+/* ---------- Model loading ---------- */
+let webllm = null, engine = null, busy = false;
+
+function setStatus(msg, isErr = false) {
+  const s = $("status");
+  s.textContent = msg;
+  s.className = isErr ? "err" : "";
+}
+
+async function loadModel() {
+  if (!navigator.gpu) {
+    setStatus("This browser does not offer WebGPU, which WebLLM needs. Use Safari on a recent iPadOS, or a recent Chrome or Edge on a computer.", true);
+    return;
+  }
+  const id = $("model").value;
+  const btn = $("loadBtn"), bar = $("bar");
+  btn.disabled = true; bar.hidden = false; bar.value = 0;
+  setStatus("Starting…");
+  const cb = (r) => { bar.value = r.progress || 0; setStatus(r.text || "Loading…"); };
+  try {
+    if (!webllm) webllm = await import(WEBLLM_URL);
+    if (!engine) engine = await webllm.CreateMLCEngine(id, { initProgressCallback: cb });
+    else { engine.setInitProgressCallback(cb); await engine.reload(id); }
+    setStatus("Model ready: " + $("model").selectedOptions[0].textContent);
+    btn.textContent = "Switch model";
+  } catch (e) {
+    engine = null;
+    setStatus("Could not load the model: " + (e && e.message ? e.message : e) + ". Try another model in the list, or reload the page.", true);
+  }
+  btn.disabled = false; bar.hidden = true;
+}
+
+/* ---------- Sending a message ---------- */
+function setBusy(b) {
+  busy = b;
+  $("sendBtn").disabled = b; $("testBtn").disabled = b;
+  $("stopBtn").hidden = !b;
+}
+
+async function send() {
+  if (busy) return;
+  const text = $("input").value.trim();
+  if (!text) return;
+  if (!engine) { setStatus("Load a model first (top right).", true); return; }
+  const c = active(), hist = chatOf(c.id);
+  hist.push({ role: "user", content: text });
+  $("input").value = ""; autoGrow();
+  renderChat(); save();
+
+  const messages = buildMessages(c, hist);
+  const reply = { role: "assistant", content: "" };
+  const node = bubble({ role: "assistant", content: "…" }, c);
+  const log = $("log");
+  log.append(node); log.scrollTop = log.scrollHeight;
+  setBusy(true);
+  let raw = "";
+  try {
+    const stream = await engine.chat.completions.create({ messages, stream: true, temperature: 0.7, max_tokens: 260 });
+    for await (const chunk of stream) {
+      raw += chunk.choices[0]?.delta?.content || "";
+      node.querySelector(".body").textContent = raw;
+      log.scrollTop = log.scrollHeight;
+    }
+  } catch (e) {
+    setStatus("The model stopped with an error: " + (e && e.message ? e.message : e), true);
+  }
+  const { clean, changes } = extractTags(raw);
+  reply.content = clean || raw.trim() || "(no reply)";
+  if (S.allowTags && changes.length) reply.applied = applyChanges(c, changes);
+  hist.push(reply);
+  save(); setBusy(false);
+  renderChat(); renderCards(); updatePrompt();
+}
+
+/* ---------- Trust test ---------- */
+async function runTest() {
+  if (busy) return;
+  if (!engine) { setStatus("Load a model first (top right).", true); return; }
+  const c = active(), line = $("testLine").value.trim();
+  if (!line) return;
+  S.testLine = line; save();
+  const out = $("testOut");
+  out.replaceChildren();
+  setBusy(true);
+  try {
+    for (const trust of [15, 80]) {
+      const copy = JSON.parse(JSON.stringify(c));
+      copy.rel.trust = trust;
+      const card = el("div", { class: "result" }, el("h3", { text: `Trust ${trust}` }), el("p", { text: "Thinking…" }));
+      out.append(card);
+      const res = await engine.chat.completions.create({
+        messages: [{ role: "system", content: buildSystem(copy) }, { role: "user", content: line }],
+        temperature: 0.6, seed: 7, max_tokens: 200
+      });
+      card.querySelector("p").textContent = extractTags(res.choices[0].message.content || "").clean || "(no reply)";
+    }
+  } catch (e) {
+    setStatus("The test stopped with an error: " + (e && e.message ? e.message : e), true);
+  }
+  setBusy(false);
+}
+
+/* ---------- Wiring ---------- */
+function autoGrow() { const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 140) + "px"; }
+
+$("loadBtn").addEventListener("click", loadModel);
+$("sendBtn").addEventListener("click", send);
+$("stopBtn").addEventListener("click", () => { if (engine) engine.interruptGenerate(); });
+$("testBtn").addEventListener("click", runTest);
+$("input").addEventListener("input", autoGrow);
+$("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+$("copyBtn").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("promptView").textContent); setStatus("Prompt copied."); }
+  catch (e) { setStatus("Could not copy. Press and hold the prompt text to select it.", true); }
+});
+$("testLine").value = S.testLine || defaults().testLine;
+$("testLine").addEventListener("input", () => { S.testLine = $("testLine").value; save(); });
+
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelector("main").dataset.view = b.dataset.tab;
+  document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+  if (b.dataset.tab === "prompt") updatePrompt();
+}));
+
+renderAll();
+</script>
+</body>
+</html>
